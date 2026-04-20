@@ -1,40 +1,67 @@
-name: Build EXE and Publish Release
+name: Build and Release
 
 on:
-  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'               # با تگ v1.0.0 اجرا میشه
+  workflow_dispatch:        # اجرای دستی
 
 permissions:
-  contents: write   # لازم برای ایجاد Release
+  contents: write
 
 jobs:
   build:
     runs-on: windows-latest
-
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-
+    
     - name: Setup Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
-
+    
     - name: Install dependencies
       run: |
         cd ImanAccounting
-        pip install --upgrade pip
-        pip install PyQt5 cryptography pyinstaller
-
+        pip install PyQt5 cryptography
+        pip install pyinstaller
+    
     - name: Build EXE
       run: |
         cd ImanAccounting
-        pyinstaller --noconfirm --onefile --windowed ^
-          --name "ImanAccounting" ^
-          --add-data "styles.qss;." ^
-          --hidden-import "cryptography" ^
-          --hidden-import "PyQt5" ^
+        pyinstaller --noconfirm --onefile --windowed `
+          --name "ImanAccounting" `
+          --add-data "styles.qss;." `
+          --hidden-import "cryptography" `
+          --hidden-import "PyQt5" `
           main.py
-
+    
+    - name: Create Release and Upload
+      uses: softprops/action-gh-release@v2
+      with:
+        files: ImanAccounting/dist/ImanAccounting.exe
+        name: "ImanAccounting ${{ github.ref_name }}"
+        body: |
+          ## 🎉 دانلود نسخه ${{ github.ref_name }}
+          
+          ### 📥 نحوه نصب:
+          ۱. فایل EXE را دانلود کنید
+          ۲. فایل license.key را کنار آن قرار دهید
+          ۳. برنامه را اجرا کنید
+          
+          ### ✨ قابلیت‌ها:
+          - 📊 حسابداری کامل
+          - 📦 انبارداری
+          - 💰 حقوق دستمزد
+          - 🧠 ImanAI Core v6.2
+          - 🧩 سیستم پلاگین
+          
+          ---
+          **حجم:** ~40 MB
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: Create Release
       id: create_release
       uses: softprops/action-gh-release@v2
