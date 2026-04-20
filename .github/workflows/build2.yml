@@ -1,39 +1,55 @@
-name: Build EXE
+name: Build EXE and Publish Release
 
 on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: write   # لازم برای ایجاد Release
 
 jobs:
   build:
     runs-on: windows-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
-    - name: List files (debug)
-      run: |
-        echo "=== Root ==="
-        dir
-        echo "=== ImanAccounting folder ==="
-        dir ImanAccounting
-    
+
     - name: Setup Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
-    
+
     - name: Install dependencies
       run: |
         cd ImanAccounting
-        pip install PyQt5 cryptography
-        pip install pyinstaller
-    
+        pip install --upgrade pip
+        pip install PyQt5 cryptography pyinstaller
+
     - name: Build EXE
       run: |
+        cd ImanAccounting
+        pyinstaller --noconfirm --onefile --windowed ^
+          --name "ImanAccounting" ^
+          --add-data "styles.qss;." ^
+          --hidden-import "cryptography" ^
+          --hidden-import "PyQt5" ^
+          main.py
+
+    - name: Create Release
+      id: create_release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: "v1.0.${{ github.run_number }}"
+        name: "ImanAccounting Build ${{ github.run_number }}"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload EXE to Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: ImanAccounting/dist/ImanAccounting.exe
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         cd ImanAccounting
         pyinstaller --noconfirm --onefile --windowed `
           --name "ImanAccounting" `
